@@ -9,8 +9,12 @@ OUTPUT_PATH = ${BUILD_DIR}/baton-avalara
 endif
 
 .PHONY: build
-build:
+build: ## Build the baton-avalara binary
 	go build -o ${OUTPUT_PATH} ./cmd/baton-avalara
+
+.PHONY: build-debug
+build-debug: ## Build the baton-avalara binary with debug symbols
+	go build -gcflags="all=-N -l" -o ${OUTPUT_PATH}_debug ./cmd/baton-avalara
 
 .PHONY: update-deps
 update-deps:
@@ -26,3 +30,16 @@ add-dep:
 .PHONY: lint
 lint:
 	golangci-lint run
+
+.PHONY: test
+test:
+	go test ./...
+
+.PHONY: test-server
+test-server: ## Run the test server
+	go run ./cmd/test-server
+
+.PHONY: targets
+targets:
+	@echo "Available targets:"
+	@awk -F ':' '/^[a-zA-Z0-9_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort

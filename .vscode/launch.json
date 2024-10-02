@@ -1,0 +1,41 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Package",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${fileDirname}"
+        },
+        {
+            "name": "Debug Compiled Binary",
+            "type": "go",
+            "request": "launch",
+            "mode": "exec",
+            "program": "${workspaceFolder}/dist/darwin_arm64/baton-avalara_debug",
+            "args": ["--username", "${input:username}", "--password", "${input:password}", "--environment", "${input:environment}"]
+        }
+    ],
+    "inputs": [
+      {
+        "id": "username",
+        "type": "promptString",
+        "description": "Enter your username",
+        "default": "defaultuser"
+      },
+      {
+        "id": "password",
+        "type": "promptString",
+        "description": "Enter your password",
+        "password": true,
+        "default": "password"
+      },
+      {
+        "id": "environment",
+        "type": "promptString",
+        "description": "Enter your environment",
+        "default": "test"
+      }
+    ]
+}
