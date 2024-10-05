@@ -3,7 +3,6 @@ package connector
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	avalaraclient "github.com/conductorone/baton-avalara/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -32,13 +31,11 @@ func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 		Skip: 0,
 	}
 
-	if pToken != nil {
-		if pt, err := parsePageToken(pToken.Token); err == nil {
-			options.Skip = pt
-		}
+	if pToken != nil && pToken.Token != "" {
+		options.NextLink = pToken.Token
 	}
 
-	resp, err := o.client.GetUsers(ctx, options)
+	resp, nextOptions, err := o.client.GetUsers(ctx, options)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("failed to get users: %w", err)
 	}
@@ -52,8 +49,8 @@ func (o *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	}
 
 	var nextPageToken string
-	if resp.RecordsetCount == pageSize {
-		nextPageToken = strconv.Itoa(options.Skip + pageSize)
+	if nextOptions != nil && nextOptions.NextLink != "" {
+		nextPageToken = nextOptions.NextLink
 	}
 
 	return users, nextPageToken, nil, nil
@@ -114,12 +111,4 @@ func userResource(ctx context.Context, user *avalaraclient.UserModel, parent *v2
 	}
 
 	return resource, nil
-}
-
-// parsePageToken converts a string token to an integer
-func parsePageToken(token string) (int, error) {
-	if token == "" {
-		return 0, nil
-	}
-	return strconv.Atoi(token)
 }

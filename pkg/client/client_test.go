@@ -168,10 +168,9 @@ func TestAvalaraClient_GetUserRoles(t *testing.T) {
 	// Call GetUserRoles
 	ctx := context.Background()
 	options := &PaginationOptions{
-		Top:  2,
-		Skip: 0,
+		Top: 2,
 	}
-	result, err := client.GetUserRoles(ctx, options)
+	result, nextOptions, err := client.GetUserRoles(ctx, options)
 
 	// Check for errors
 	if err != nil {
@@ -194,19 +193,30 @@ func TestAvalaraClient_GetUserRoles(t *testing.T) {
 	}
 
 	// Check first role
-	if result.Value[0].ID != 1 || result.Value[0].Description != "SystemAdmin" {
-		t.Errorf("Unexpected first role: %+v", result.Value[0])
+	expectedFirstRole := SecurityRoleModel{
+		ID:          1,
+		Description: "SystemAdmin",
+	}
+	if !reflect.DeepEqual(result.Value[0], expectedFirstRole) {
+		t.Errorf("Unexpected first role: got %+v, want %+v", result.Value[0], expectedFirstRole)
 	}
 
 	// Check second role
-	if result.Value[1].ID != 2 || result.Value[1].Description != "AccountAdmin" {
-		t.Errorf("Unexpected second role: %+v", result.Value[1])
+	expectedSecondRole := SecurityRoleModel{
+		ID:          2,
+		Description: "AccountAdmin",
+	}
+	if !reflect.DeepEqual(result.Value[1], expectedSecondRole) {
+		t.Errorf("Unexpected second role: got %+v, want %+v", result.Value[1], expectedSecondRole)
 	}
 
-	// Check next link
+	// Check next options
+	if nextOptions == nil {
+		t.Fatal("Expected non-nil nextOptions")
+	}
 	expectedNextLink := "https://api.avalara.com/api/v2/definitions/securityroles?$skip=2&$top=2"
-	if result.NextLink != expectedNextLink {
-		t.Errorf("Expected NextLink to be %s, got %s", expectedNextLink, result.NextLink)
+	if nextOptions.NextLink != expectedNextLink {
+		t.Errorf("Expected NextLink to be %s, got %s", expectedNextLink, nextOptions.NextLink)
 	}
 }
 
@@ -231,13 +241,12 @@ func TestAvalaraClient_GetUserRoles_RequestDetails(t *testing.T) {
 	client := NewAvalaraClient("sandbox", baseHttpClient)
 	client.AddCredentials("testuser", "testpass")
 
-	// Call GetUserRoles
+	// Call GetUserRoles with nextLink
 	ctx := context.Background()
 	options := &PaginationOptions{
-		Top:  10,
-		Skip: 10,
+		NextLink: "https://sandbox-rest.avalara.com/api/v2/definitions/securityroles?$top=10&$skip=20",
 	}
-	_, err := client.GetUserRoles(ctx, options)
+	_, _, err := client.GetUserRoles(ctx, options)
 
 	// Check for errors
 	if err != nil {
@@ -250,25 +259,9 @@ func TestAvalaraClient_GetUserRoles_RequestDetails(t *testing.T) {
 	}
 
 	// Check URL components
-	expectedScheme := "https"
-	expectedHost := "sandbox-rest.avalara.com"
-	expectedPath := "/api/v2/definitions/securityroles"
-	expectedQuery := url.Values{
-		"$top":  []string{"10"},
-		"$skip": []string{"10"},
-	}
-
-	if capturedRequest.URL.Scheme != expectedScheme {
-		t.Errorf("Expected scheme %s, got %s", expectedScheme, capturedRequest.URL.Scheme)
-	}
-	if capturedRequest.URL.Host != expectedHost {
-		t.Errorf("Expected host %s, got %s", expectedHost, capturedRequest.URL.Host)
-	}
-	if capturedRequest.URL.Path != expectedPath {
-		t.Errorf("Expected path %s, got %s", expectedPath, capturedRequest.URL.Path)
-	}
-	if !reflect.DeepEqual(capturedRequest.URL.Query(), expectedQuery) {
-		t.Errorf("Expected query %v, got %v", expectedQuery, capturedRequest.URL.Query())
+	expectedURL := "https://sandbox-rest.avalara.com/api/v2/definitions/securityroles?$top=10&$skip=20"
+	if capturedRequest.URL.String() != expectedURL {
+		t.Errorf("Expected URL %s, got %s", expectedURL, capturedRequest.URL.String())
 	}
 
 	// Check headers
@@ -283,6 +276,58 @@ func TestAvalaraClient_GetUserRoles_RequestDetails(t *testing.T) {
 		if value := capturedRequest.Header.Get(key); value != expectedValue {
 			t.Errorf("Expected header %s to be %s, got %s", key, expectedValue, value)
 		}
+	}
+}
+
+func TestAvalaraClient_GetUserRoles_WithNextLink(t *testing.T) {
+	mockResponse := &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(`{
+			"@recordsetCount": 2,
+			"value": [
+				{
+					"id": 3,
+					"description": "CompanyAdmin"
+				},
+				{
+					"id": 4,
+					"description": "CompanyUser"
+				}
+			],
+			"@nextLink": "https://api.avalara.com/api/v2/definitions/securityroles?$skip=4&$top=2"
+		}`)),
+	}
+
+	client := newTestClient(mockResponse, nil)
+
+	ctx := context.Background()
+	options := &PaginationOptions{
+		NextLink: "https://api.avalara.com/api/v2/definitions/securityroles?$skip=2&$top=2",
+	}
+	result, nextOptions, err := client.GetUserRoles(ctx, options)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("Expected non-nil result")
+	}
+
+	if len(result.Value) != 2 {
+		t.Errorf("Expected 2 roles, got %d", len(result.Value))
+	}
+
+	if result.Value[0].ID != 3 || result.Value[0].Description != "CompanyAdmin" {
+		t.Errorf("Unexpected first role: %+v", result.Value[0])
+	}
+
+	if nextOptions == nil {
+		t.Fatal("Expected non-nil nextOptions")
+	}
+	expectedNextLink := "https://api.avalara.com/api/v2/definitions/securityroles?$skip=4&$top=2"
+	if nextOptions.NextLink != expectedNextLink {
+		t.Errorf("Expected NextLink to be %s, got %s", expectedNextLink, nextOptions.NextLink)
 	}
 }
 
@@ -427,7 +472,7 @@ func TestAvalaraClient_GetUsers(t *testing.T) {
 		Top:  2,
 		Skip: 0,
 	}
-	result, err := client.GetUsers(ctx, options)
+	result, updatedOptions, err := client.GetUsers(ctx, options)
 
 	// Check for errors
 	if err != nil {
@@ -491,7 +536,7 @@ func TestAvalaraClient_GetUsers(t *testing.T) {
 
 	// Check next link
 	expectedNextLink := "https://rest.avalara.com/api/v2/users?$skip=2&$top=2"
-	if result.NextLink != expectedNextLink {
+	if updatedOptions.NextLink != expectedNextLink {
 		t.Errorf("Expected NextLink to be %s, got %s", expectedNextLink, result.NextLink)
 	}
 }
@@ -568,7 +613,7 @@ func TestAvalaraClient_GetPermissions(t *testing.T) {
 		Top:  3,
 		Skip: 0,
 	}
-	result, err := client.GetPermissions(ctx, options)
+	result, nextOptions, err := client.GetPermissions(ctx, options)
 
 	// Check for errors
 	if err != nil {
@@ -598,7 +643,7 @@ func TestAvalaraClient_GetPermissions(t *testing.T) {
 
 	// Check next link
 	expectedNextLink := "https://rest.avalara.com/api/v2/definitions/permissions?$skip=3&$top=3"
-	if result.NextLink != expectedNextLink {
+	if nextOptions.NextLink != expectedNextLink {
 		t.Errorf("Expected NextLink to be %s, got %s", expectedNextLink, result.NextLink)
 	}
 }
@@ -630,7 +675,7 @@ func TestAvalaraClient_GetPermissions_RequestDetails(t *testing.T) {
 		Top:  10,
 		Skip: 5,
 	}
-	_, err := client.GetPermissions(ctx, options)
+	_, nextOptions, err := client.GetPermissions(ctx, options)
 
 	// Check for errors
 	if err != nil {
@@ -676,6 +721,10 @@ func TestAvalaraClient_GetPermissions_RequestDetails(t *testing.T) {
 		if value := capturedRequest.Header.Get(key); value != expectedValue {
 			t.Errorf("Expected header %s to be %s, got %s", key, expectedValue, value)
 		}
+	}
+	expectedNextLink := ""
+	if nextOptions.NextLink != expectedNextLink {
+		t.Errorf("Expected NextLink to be %s, got %s", expectedNextLink, nextOptions.NextLink)
 	}
 }
 

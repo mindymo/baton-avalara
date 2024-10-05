@@ -23,10 +23,16 @@ type AvalaraClient struct {
 
 // PaginationOptions represents the pagination parameters
 type PaginationOptions struct {
-	Top     int
-	Skip    int
-	OrderBy string
-	Filter  string
+	Top      int
+	Skip     int
+	OrderBy  string
+	Filter   string
+	NextLink string
+}
+
+// PaginatedResponse is a generic interface for paginated responses
+type PaginatedResponse interface {
+	GetNextLink() string
 }
 
 // NewAvalaraClient creates a new instance of AvalaraClient
@@ -76,13 +82,20 @@ type AvalaraErrorResponse struct {
 }
 
 func (c *AvalaraClient) get(ctx context.Context, endpoint string, options *PaginationOptions, result interface{}) error {
-	u, err := url.Parse(c.baseURL + endpoint)
+	var u *url.URL
+	var err error
+
+	if options != nil && options.NextLink != "" {
+		u, err = url.Parse(options.NextLink)
+	} else {
+		u, err = url.Parse(c.baseURL + endpoint)
+	}
 	if err != nil {
 		return fmt.Errorf("error parsing URL: %w", err)
 	}
 
-	query := u.Query()
-	if options != nil {
+	if options != nil && options.NextLink == "" {
+		query := u.Query()
 		if options.Top > 0 {
 			query.Set("$top", strconv.Itoa(options.Top))
 		}
@@ -95,8 +108,8 @@ func (c *AvalaraClient) get(ctx context.Context, endpoint string, options *Pagin
 		if options.Filter != "" {
 			query.Set("$filter", options.Filter)
 		}
+		u.RawQuery = query.Encode()
 	}
-	u.RawQuery = query.Encode()
 
 	req, err := c.httpClient.NewRequest(ctx, "GET", u)
 	if err != nil {
@@ -139,44 +152,53 @@ func (c *AvalaraClient) get(ctx context.Context, endpoint string, options *Pagin
 	return nil
 }
 
+// Helper function to update PaginationOptions
+func updatePaginationOptions(options *PaginationOptions, response PaginatedResponse) *PaginationOptions {
+	if options == nil {
+		options = &PaginationOptions{}
+	}
+	options.NextLink = response.GetNextLink()
+	return options
+}
+
 // GetUserRoles retrieves the security roles for the authenticated user with pagination
-func (c *AvalaraClient) GetUserRoles(ctx context.Context, options *PaginationOptions) (*SecurityRoleResponse, error) {
+func (c *AvalaraClient) GetUserRoles(ctx context.Context, options *PaginationOptions) (*SecurityRoleResponse, *PaginationOptions, error) {
 	var result SecurityRoleResponse
 	err := c.get(ctx, "/api/v2/definitions/securityroles", options, &result)
 	if err != nil {
-		return nil, err
+		return nil, options, err
 	}
-	return &result, nil
+	return &result, updatePaginationOptions(options, &result), nil
 }
 
 // GetAccounts retrieves the accounts associated with the authenticated user with pagination
-func (c *AvalaraClient) GetAccounts(ctx context.Context, options *PaginationOptions) (*AccountResponse, error) {
+func (c *AvalaraClient) GetAccounts(ctx context.Context, options *PaginationOptions) (*AccountResponse, *PaginationOptions, error) {
 	var result AccountResponse
 	err := c.get(ctx, "/api/v2/accounts", options, &result)
 	if err != nil {
-		return nil, err
+		return nil, options, err
 	}
-	return &result, nil
+	return &result, updatePaginationOptions(options, &result), nil
 }
 
 // GetUsers retrieves the users associated with the authenticated user with pagination
-func (c *AvalaraClient) GetUsers(ctx context.Context, options *PaginationOptions) (*UserResponse, error) {
+func (c *AvalaraClient) GetUsers(ctx context.Context, options *PaginationOptions) (*UserResponse, *PaginationOptions, error) {
 	var result UserResponse
 	err := c.get(ctx, "/api/v2/users", options, &result)
 	if err != nil {
-		return nil, err
+		return nil, options, err
 	}
-	return &result, nil
+	return &result, updatePaginationOptions(options, &result), nil
 }
 
 // GetPermissions retrieves the list of permissions with pagination
-func (c *AvalaraClient) GetPermissions(ctx context.Context, options *PaginationOptions) (*PermissionResponse, error) {
+func (c *AvalaraClient) GetPermissions(ctx context.Context, options *PaginationOptions) (*PermissionResponse, *PaginationOptions, error) {
 	var result PermissionResponse
 	err := c.get(ctx, "/api/v2/definitions/permissions", options, &result)
 	if err != nil {
-		return nil, err
+		return nil, options, err
 	}
-	return &result, nil
+	return &result, updatePaginationOptions(options, &result), nil
 }
 
 // GetUserEntitlements retrieves all entitlements for a single user
@@ -209,6 +231,11 @@ type AccountResponse struct {
 	PageKey        string         `json:"pageKey,omitempty"`
 }
 
+// Implement GetNextLink() for each response type
+func (r *AccountResponse) GetNextLink() string {
+	return r.NextLink
+}
+
 // UserModel represents the structure of a user in the API response
 type UserModel struct {
 	ID                   int    `json:"id"`
@@ -234,6 +261,11 @@ type UserResponse struct {
 	PageKey        string      `json:"pageKey,omitempty"`
 }
 
+// Implement GetNextLink() for each response type
+func (r *UserResponse) GetNextLink() string {
+	return r.NextLink
+}
+
 // SecurityRoleModel represents the structure of a security role in the API response
 type SecurityRoleModel struct {
 	ID          int    `json:"id"`
@@ -248,12 +280,22 @@ type SecurityRoleResponse struct {
 	PageKey        string              `json:"pageKey,omitempty"`
 }
 
+// Implement GetNextLink() for each response type
+func (r *SecurityRoleResponse) GetNextLink() string {
+	return r.NextLink
+}
+
 // PermissionResponse represents the structure of the API response for permission queries
 type PermissionResponse struct {
 	RecordsetCount int      `json:"@recordsetCount,omitempty"`
 	Value          []string `json:"value"`
 	NextLink       string   `json:"@nextLink,omitempty"`
 	PageKey        string   `json:"pageKey,omitempty"`
+}
+
+// Implement GetNextLink() for each response type
+func (r *PermissionResponse) GetNextLink() string {
+	return r.NextLink
 }
 
 // EntitlementResponse represents the structure of the API response for user entitlements

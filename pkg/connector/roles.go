@@ -34,15 +34,14 @@ func (r *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	var rv []*v2.Resource
 
 	options := &avalaraclient.PaginationOptions{
-		Top:  100,
-		Skip: 0,
+		Top: 100,
 	}
 
 	if pToken != nil && pToken.Token != "" {
-		options.Skip, _ = strconv.Atoi(pToken.Token)
+		options.NextLink = pToken.Token
 	}
 
-	roles, err := r.client.GetUserRoles(ctx, options)
+	roles, nextOptions, err := r.client.GetUserRoles(ctx, options)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("avalara-connector: failed to list roles: %w", err)
 	}
@@ -68,8 +67,8 @@ func (r *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 	}
 
 	var nextPageToken string
-	if len(roles.Value) == options.Top {
-		nextPageToken = strconv.Itoa(options.Skip + len(roles.Value))
+	if nextOptions != nil && nextOptions.NextLink != "" {
+		nextPageToken = nextOptions.NextLink
 	}
 
 	return rv, nextPageToken, nil, nil
@@ -98,15 +97,14 @@ func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 	}
 
 	options := &avalaraclient.PaginationOptions{
-		Top:  100,
-		Skip: 0,
+		Top: 100,
 	}
 
 	if pToken != nil && pToken.Token != "" {
-		options.Skip, _ = strconv.Atoi(pToken.Token)
+		options.NextLink = pToken.Token
 	}
 
-	users, err := r.client.GetUsers(ctx, options)
+	users, nextOptions, err := r.client.GetUsers(ctx, options)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("avalara-connector: failed to list users: %w", err)
 	}
@@ -123,8 +121,8 @@ func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 	}
 
 	var nextPageToken string
-	if len(users.Value) == options.Top {
-		nextPageToken = strconv.Itoa(options.Skip + len(users.Value))
+	if nextOptions != nil && nextOptions.NextLink != "" {
+		nextPageToken = nextOptions.NextLink
 	}
 
 	return rv, nextPageToken, nil, nil

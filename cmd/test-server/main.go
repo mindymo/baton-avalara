@@ -88,6 +88,7 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func sendAuthError(w http.ResponseWriter, message string) {
+	log.Printf("Authentication error: %s", message)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -108,6 +109,7 @@ func handleSecurityRoles(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters
 	queryParams := r.URL.Query()
 	filter := queryParams.Get("$filter")
+	skip, _ := strconv.Atoi(queryParams.Get("$skip"))
 
 	// Define all security roles
 	allRoles := []map[string]interface{}{
@@ -149,12 +151,12 @@ func handleSecurityRoles(w http.ResponseWriter, r *http.Request) {
 
 	response := map[string]interface{}{
 		"@recordsetCount": len(filteredRoles),
-		"value":           filteredRoles,
+		"value":           filteredRoles[skip:],
 	}
 
-	// Update nextLink if necessary
-	if len(filteredRoles) == len(allRoles) {
-		response["@nextLink"] = fmt.Sprintf("https://api.avalara.com/api/v2/definitions/securityroles?$skip=%d&$top=%d&$filter=%s", len(filteredRoles), len(filteredRoles), filter)
+	// Update nextLink only for the first request
+	if skip == 0 && len(filteredRoles) > 0 {
+		response["@nextLink"] = fmt.Sprintf("http://localhost:8080/api/v2/definitions/securityroles?$skip=%d&$top=%d&$filter=%s", len(filteredRoles), len(filteredRoles), filter)
 	}
 
 	sendJSONResponse(w, response)
@@ -306,7 +308,7 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 	// Update nextLink if necessary
 	if end < len(filteredUsers) {
 		nextSkip := skip + len(paginatedUsers)
-		response["@nextLink"] = fmt.Sprintf("https://rest.avalara.com/api/v2/users?$skip=%d&$top=%d&$filter=%s&$orderBy=%s&$include=%s", nextSkip, top, filter, orderBy, include)
+		response["@nextLink"] = fmt.Sprintf("http://localhost:8080/api/v2/users?$skip=%d&$top=%d&$filter=%s&$orderBy=%s&$include=%s", nextSkip, top, filter, orderBy, include)
 	}
 
 	sendJSONResponse(w, response)
@@ -359,7 +361,7 @@ func handlePermissions(w http.ResponseWriter, r *http.Request) {
 			"CompanySvc",
 			"TaxSvc",
 		},
-		"@nextLink": "https://rest.avalara.com/api/v2/definitions/permissions?$skip=3&$top=3",
+		"@nextLink": "http://localhost:8080/api/v2/definitions/permissions?$skip=3&$top=3",
 	}
 	sendJSONResponse(w, response)
 }
