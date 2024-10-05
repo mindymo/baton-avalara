@@ -41,7 +41,7 @@ func NewAvalaraClient(environment string, httpClient *uhttp.BaseHttpClient) *Ava
 		baseURL = "https://rest.avalara.com"
 	}
 
-	appName := "MyApp"
+	appName := "baton-avalara"
 	appVersion := "1.0.0"
 
 	clientID := fmt.Sprintf("%s; %s; Go SDK; API_VERSION", appName, appVersion)

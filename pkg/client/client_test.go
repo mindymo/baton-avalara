@@ -51,7 +51,7 @@ func TestNewAvalaraClient(t *testing.T) {
 
 	t.Run("Client header", func(t *testing.T) {
 		client := NewAvalaraClient("", nil)
-		expectedPrefix := "MyApp; 1.0.0; Go SDK; API_VERSION"
+		expectedPrefix := "baton-avalara; 1.0.0; Go SDK; API_VERSION"
 		if !strings.HasPrefix(client.clientHeader, expectedPrefix) {
 			t.Errorf("Expected clientHeader to start with %s, got %s", expectedPrefix, client.clientHeader)
 		}
@@ -923,7 +923,7 @@ func TestGetAvalaraClient(t *testing.T) {
 			}
 
 			// Check client header
-			expectedPrefix := "MyApp; 1.0.0; Go SDK; API_VERSION"
+			expectedPrefix := "baton-avalara; 1.0.0; Go SDK; API_VERSION"
 			if !strings.HasPrefix(client.clientHeader, expectedPrefix) {
 				t.Errorf("Expected clientHeader to start with %s, got %s", expectedPrefix, client.clientHeader)
 			}
