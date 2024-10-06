@@ -428,7 +428,7 @@ func TestAvalaraClient_GetAccounts(t *testing.T) {
 // Optional
 // string.
 func TestAvalaraClient_GetUsers(t *testing.T) {
-	// Create a mock response.
+	// Create a mock response with a 200 status code.
 	mockResponse := &http.Response{
 		StatusCode: http.StatusOK,
 		Body: io.NopCloser(strings.NewReader(`{
