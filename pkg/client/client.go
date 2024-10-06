@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
@@ -45,13 +46,17 @@ type PaginatedResponse interface {
 // NewAvalaraClient creates a new instance of AvalaraClient.
 func NewAvalaraClient(environment string, httpClient *uhttp.BaseHttpClient) *AvalaraClient {
 	var baseURL string
-	switch environment {
-	case "sandbox":
-		baseURL = SandboxBaseURL
-	case "test":
-		baseURL = TestBaseURL
-	default:
-		baseURL = ProductionBaseURL
+	if strings.HasPrefix(strings.ToLower(environment), "http") {
+		baseURL = environment
+	} else {
+		switch environment {
+		case "sandbox":
+			baseURL = SandboxBaseURL
+		case "test":
+			baseURL = TestBaseURL
+		default:
+			baseURL = ProductionBaseURL
+		}
 	}
 
 	appName := "baton-avalara"
