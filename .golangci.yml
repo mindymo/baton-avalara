@@ -34,7 +34,6 @@ linters-settings:
       # though they implement an interface that can.
       - name: unhandled-error
         arguments:
-          - fmt.Printf
           - fmt.Println
           - fmt.Fprintf
           - fmt.Fprintln

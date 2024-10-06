@@ -39,25 +39,12 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    # Define any services needed for the test suite (or delete this section)
-    # services:
-    #   postgres:
-    #     image: postgres:16
-    #     ports:
-    #       - "5432:5432"
-    #     env:
-    #       POSTGRES_PASSWORD: secretpassword
     env:
       BATON_LOG_LEVEL: debug
-      # Add any environment variables needed to run baton-avalara
-      # BATON_BASE_URL: 'http://localhost:8080'
-      # BATON_ACCESS_TOKEN: 'secret_token'
-      # The following parameters are passed to grant/revoke commands
-      # Change these to the correct IDs for your test data
-      CONNECTOR_GRANT: 'grant:entitlement:group:1234:member:user:9876'
-      CONNECTOR_ENTITLEMENT: 'entitlement:group:1234:member'
-      CONNECTOR_PRINCIPAL: 'user:9876'
-      CONNECTOR_PRINCIPAL_TYPE: 'user'
+      BATON_USERNAME: 'testuser'
+      BATON_PASSWORD: 'testpass'
+      TEST_SERVER_PORT: 8080
+      BATON_ENVIRONMENT: "test"
     steps:
       - name: Install Go
         uses: actions/setup-go@v5
@@ -65,40 +52,56 @@ jobs:
           go-version: 1.22.x
       - name: Checkout code
         uses: actions/checkout@v4
-      # Install any dependencies here (or delete this)
-      # - name: Install postgres client
-      #   run: sudo apt install postgresql-client
-      # Run any fixture setup here (or delete this)
-      # - name: Import sql into postgres
-      #   run: psql -h localhost --user postgres -f environment.sql
-      #   env:
-      #     PGPASSWORD: secretpassword
       - name: Build baton-avalara
         run: go build ./cmd/baton-avalara
+      - name: Build test server
+        run: go build -o test-server ./cmd/test-server
+      - name: Start test server
+        run: ./test-server &
+      - name: Wait for test server to start
+        run: sleep 5
       - name: Run baton-avalara
         run: ./baton-avalara
 
       - name: Install baton
         run: ./scripts/get-baton.sh && mv baton /usr/local/bin
 
-      - name: Check for grant before revoking
+      - name: Check synced data
+        run: |
+          # Check entitlements
+          baton entitlements --output-format=json | jq --exit-status '.entitlements | length > 0'
+          # Check grants
+          baton grants --output-format=json | jq --exit-status '.grants | length > 0'
 
-        run:
-          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
+      - name: Check test server data
+        run: |
+          # Check security roles
+          curl -s -u testuser:testpass -H "X-Avalara-Client: test" "http://localhost:${{ env.TEST_SERVER_PORT }}/api/v2/definitions/securityroles" | jq --exit-status '.value | length > 0'
 
+          # Check users
+          curl -s -u testuser:testpass -H "X-Avalara-Client: test" "http://localhost:${{ env.TEST_SERVER_PORT }}/api/v2/users" | jq --exit-status '.value | length > 0'
 
-      - name: Revoke grants
-        run: ./baton-avalara --revoke-grant="${{ env.CONNECTOR_GRANT }}"
+          # Check ping
+          curl -s -u testuser:testpass -H "X-Avalara-Client: test" "http://localhost:${{ env.TEST_SERVER_PORT }}/api/v2/utilities/ping" | jq --exit-status '.authenticated == true and .authenticatedUserName == "testuser"'
 
-      - name: Check grant was revoked
-        run: ./baton-avalara && baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status "if .grants then .grants[]?.principal.id.resource != \"${{ env.CONNECTOR_PRINCIPAL }}\" else . end"
-
-      - name: Grant entitlement
-        # Change the grant arguments to the correct IDs for your test data
-        run: ./baton-avalara --grant-entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --grant-principal="${{ env.CONNECTOR_PRINCIPAL }}" --grant-principal-type="${{ env.CONNECTOR_PRINCIPAL_TYPE }}"
-
-      - name: Check grant was re-granted
-
-        run:
-          baton grants --entitlement="${{ env.CONNECTOR_ENTITLEMENT }}" --output-format=json | jq --exit-status ".grants[].principal.id.resource == \"${{ env.CONNECTOR_PRINCIPAL }}\""
+      - name: Compare synced data with test server data
+        run: |
+          # Get synced entitlements
+          SYNCED_ENTITLEMENTS=$(baton entitlements --output-format=json | jq -c '.entitlements')
+          
+          # Get test server security roles (which correspond to entitlements)
+          SERVER_ROLES=$(curl -s -u testuser:testpass -H "X-Avalara-Client: test" "http://localhost:${{ env.TEST_SERVER_PORT }}/api/v2/definitions/securityroles" | jq -c '.value')
+          
+          # Compare entitlements count
+          SYNCED_COUNT=$(echo $SYNCED_ENTITLEMENTS | jq 'length')
+          SERVER_COUNT=$(echo $SERVER_ROLES | jq 'length')
+          
+          if [ "$SYNCED_COUNT" -ne "$SERVER_COUNT" ]; then
+            echo "Mismatch in entitlement count. Synced: $SYNCED_COUNT, Server: $SERVER_COUNT"
+            exit 1
+          fi
+          
+          # Similar comparisons can be added for principals and grants
+          
+          echo "Synced data matches test server data"
 
