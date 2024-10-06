@@ -90,11 +90,7 @@ func sendAuthError(w http.ResponseWriter, message string) {
 	err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": map[string]interface{}{
 			"code":    "AuthenticationException",
-			"message": message,
-			"target":  "Authorization",
-			"details": []map[string]string{
-				{"message": "Please provide valid credentials and required headers"},
-			},
+			"message": nil,
 		},
 	})
 	if err != nil {

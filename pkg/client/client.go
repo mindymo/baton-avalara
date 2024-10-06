@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	SandboxBaseDomain = "sandbox-rest.avalara.com"
-	ProductionBaseURL = "https://rest.avalara.com"
-	SandboxBaseURL    = "https://sandbox-rest.avalara.com"
+	SandboxBaseDomain = "sandbox-rest.avatax.com"
+	ProductionBaseURL = "https://rest.avatax.com"
+	SandboxBaseURL    = "https://sandbox-rest.avatax.com"
 	TestBaseURL       = "http://localhost:8080"
 )
 

@@ -163,7 +163,7 @@ func TestAvalaraClient_GetUserRoles(t *testing.T) {
 					"description": "AccountAdmin"
 				}
 			],
-			"@nextLink": "https://api.avalara.com/api/v2/definitions/securityroles?$skip=2&$top=2"
+			"@nextLink": "https://rest.avatax.com/api/v2/definitions/securityroles?$skip=2&$top=2"
 		}`)),
 	}
 
@@ -219,7 +219,7 @@ func TestAvalaraClient_GetUserRoles(t *testing.T) {
 	if nextOptions == nil {
 		t.Fatal("Expected non-nil nextOptions")
 	}
-	expectedNextLink := "https://api.avalara.com/api/v2/definitions/securityroles?$skip=2&$top=2"
+	expectedNextLink := "https://rest.avatax.com/api/v2/definitions/securityroles?$skip=2&$top=2"
 	if nextOptions.NextLink != expectedNextLink {
 		t.Errorf("Expected NextLink to be %s, got %s", expectedNextLink, nextOptions.NextLink)
 	}
@@ -299,7 +299,7 @@ func TestAvalaraClient_GetUserRoles_WithNextLink(t *testing.T) {
 					"description": "CompanyUser"
 				}
 			],
-			"@nextLink": "https://api.avalara.com/api/v2/definitions/securityroles?$skip=4&$top=2"
+			"@nextLink": "https://rest.avatax.com/api/v2/definitions/securityroles?$skip=4&$top=2"
 		}`)),
 	}
 
@@ -307,7 +307,7 @@ func TestAvalaraClient_GetUserRoles_WithNextLink(t *testing.T) {
 
 	ctx := context.Background()
 	options := &PaginationOptions{
-		NextLink: "https://api.avalara.com/api/v2/definitions/securityroles?$skip=2&$top=2",
+		NextLink: "https://rest.avatax.com/api/v2/definitions/securityroles?$skip=2&$top=2",
 	}
 	result, nextOptions, err := client.GetUserRoles(ctx, options)
 
@@ -330,7 +330,7 @@ func TestAvalaraClient_GetUserRoles_WithNextLink(t *testing.T) {
 	if nextOptions == nil {
 		t.Fatal("Expected non-nil nextOptions")
 	}
-	expectedNextLink := "https://api.avalara.com/api/v2/definitions/securityroles?$skip=4&$top=2"
+	expectedNextLink := "https://rest.avatax.com/api/v2/definitions/securityroles?$skip=4&$top=2"
 	if nextOptions.NextLink != expectedNextLink {
 		t.Errorf("Expected NextLink to be %s, got %s", expectedNextLink, nextOptions.NextLink)
 	}
@@ -465,7 +465,7 @@ func TestAvalaraClient_GetUsers(t *testing.T) {
 					"isDeleted": false
 				}
 			],
-			"@nextLink": "https://rest.avalara.com/api/v2/users?$skip=2&$top=2"
+			"@nextLink": "https://rest.avatax.com/api/v2/users?$skip=2&$top=2"
 		}`)),
 	}
 
@@ -541,7 +541,7 @@ func TestAvalaraClient_GetUsers(t *testing.T) {
 	}
 
 	// Check next link.
-	expectedNextLink := "https://rest.avalara.com/api/v2/users?$skip=2&$top=2"
+	expectedNextLink := "https://rest.avatax.com/api/v2/users?$skip=2&$top=2"
 	if updatedOptions.NextLink != expectedNextLink {
 		t.Errorf("Expected NextLink to be %s, got %s", expectedNextLink, result.NextLink)
 	}
@@ -607,7 +607,7 @@ func TestAvalaraClient_GetPermissions(t *testing.T) {
 				"CompanySvc",
 				"TaxSvc"
 			],
-			"@nextLink": "https://rest.avalara.com/api/v2/definitions/permissions?$skip=3&$top=3"
+			"@nextLink": "https://rest.avatax.com/api/v2/definitions/permissions?$skip=3&$top=3"
 		}`)),
 	}
 
@@ -649,7 +649,7 @@ func TestAvalaraClient_GetPermissions(t *testing.T) {
 	}
 
 	// Check next link.
-	expectedNextLink := "https://rest.avalara.com/api/v2/definitions/permissions?$skip=3&$top=3"
+	expectedNextLink := "https://rest.avatax.com/api/v2/definitions/permissions?$skip=3&$top=3"
 	if nextOptions.NextLink != expectedNextLink {
 		t.Errorf("Expected NextLink to be %s, got %s", expectedNextLink, result.NextLink)
 	}
