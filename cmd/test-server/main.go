@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -15,7 +16,21 @@ import (
 	"github.com/google/uuid"
 )
 
+// Add this function at the beginning of the file.
+func getBaseURL() string {
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:8080"
+	} else if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
+		baseURL = "http://" + baseURL
+	}
+	return baseURL
+}
+
 func main() {
+	baseURL := getBaseURL()
+	log.Printf("Starting test server with base URL: %s\n", baseURL)
+
 	http.HandleFunc("/api/v2/definitions/securityroles", authMiddleware(handleSecurityRoles))
 	http.HandleFunc("/api/v2/users", authMiddleware(handleUsers))
 	http.HandleFunc("/api/v2/definitions/permissions", authMiddleware(handlePermissions))
@@ -24,7 +39,7 @@ func main() {
 
 	port := 8080
 	log.Printf("Starting test server on port %d...\n", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil)) //nolint:gosec // This is a test server.
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", port), nil)) //nolint:gosec // This is a test server.
 }
 
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -152,8 +167,8 @@ func handleSecurityRoles(w http.ResponseWriter, r *http.Request) {
 	// Update nextLink only for the first request.
 	if skip == 0 && len(filteredRoles) > 0 {
 		response["@nextLink"] = fmt.Sprintf(
-			"http://localhost:8080/api/v2/definitions/securityroles?$skip=%d&$top=%d&$filter=%s",
-			len(filteredRoles), len(filteredRoles), filter)
+			"%s/api/v2/definitions/securityroles?$skip=%d&$top=%d&$filter=%s",
+			getBaseURL(), len(filteredRoles), len(filteredRoles), filter)
 	}
 
 	sendJSONResponse(w, response)
@@ -306,8 +321,8 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 	if end < len(filteredUsers) {
 		nextSkip := skip + len(paginatedUsers)
 		response["@nextLink"] = fmt.Sprintf(
-			"http://localhost:8080/api/v2/users?$skip=%d&$top=%d&$filter=%s&$orderBy=%s&$include=%s",
-			nextSkip, top, filter, orderBy, include)
+			"%s/api/v2/users?$skip=%d&$top=%d&$filter=%s&$orderBy=%s&$include=%s",
+			getBaseURL(), nextSkip, top, filter, orderBy, include)
 	}
 
 	sendJSONResponse(w, response)
@@ -360,7 +375,7 @@ func handlePermissions(w http.ResponseWriter, r *http.Request) {
 			"CompanySvc",
 			"TaxSvc",
 		},
-		"@nextLink": "http://localhost:8080/api/v2/definitions/permissions?$skip=3&$top=3",
+		"@nextLink": fmt.Sprintf("%s/api/v2/definitions/permissions?$skip=3&$top=3", getBaseURL()),
 	}
 	sendJSONResponse(w, response)
 }
