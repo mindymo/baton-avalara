@@ -23,7 +23,7 @@ func (d *Avalara) ResourceSyncers(ctx context.Context) []connectorbuilder.Resour
 	}
 }
 
-// Asset takes an input AssetRef and attempts to fetch it using the connector's authenticated http client
+// Asset takes an input AssetRef and attempts to fetch it using the connector's authenticated http client.
 // It streams a response, always starting with a metadata object, following by chunked payloads for the asset.
 func (d *Avalara) Asset(ctx context.Context, asset *v2.AssetRef) (string, io.ReadCloser, error) {
 	return "", nil, nil
@@ -37,21 +37,20 @@ func (d *Avalara) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
 	}, nil
 }
 
-// Validate is called to ensure that the connector is properly configured. It should exercise any API credentials
+// Validate is called to ensure that the connector is properly configured. It should exercise any API credentials.
 // to be sure that they are valid.
 func (d *Avalara) Validate(ctx context.Context) (annotations.Annotations, error) {
-	// Use the Ping method to validate the connection
+	// Use the Ping method to validate the connection.
 	pingResponse, err := d.client.Ping(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate Avalara connection: %w", err)
 	}
 
-	// Check if the ping response indicates successful authentication
+	// Check if the ping response indicates successful authentication.
 	if !pingResponse.Authenticated {
 		return nil, fmt.Errorf("Avalara authentication failed")
 	}
 
-	// If we've reached this point, the validation was successful
 	return nil, nil
 }
 

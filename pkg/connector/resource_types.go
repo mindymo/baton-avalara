@@ -12,20 +12,6 @@ var userResourceType = &v2.ResourceType{
 	Annotations: annotationsForUserResourceType(),
 }
 
-var accountResourceType = &v2.ResourceType{
-	Id:          "account",
-	DisplayName: "Account",
-	Description: "Represents an Avalara account",
-	Traits:      []v2.ResourceType_Trait{},
-}
-
-var permissionResourceType = &v2.ResourceType{
-	Id:          "permission",
-	DisplayName: "Permission",
-	Description: "Represents an Avalara permission",
-	Traits:      []v2.ResourceType_Trait{},
-}
-
 var roleResourceType = &v2.ResourceType{
 	Id:          "role",
 	DisplayName: "Role",

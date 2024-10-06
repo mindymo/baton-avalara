@@ -13,7 +13,14 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 )
 
-// AvalaraClient represents the Avalara API client
+const (
+	SandboxBaseDomain = "sandbox-rest.avalara.com"
+	ProductionBaseURL = "https://rest.avalara.com"
+	SandboxBaseURL    = "https://sandbox-rest.avalara.com"
+	TestBaseURL       = "http://localhost:8080"
+)
+
+// AvalaraClient represents the Avalara API client.
 type AvalaraClient struct {
 	baseURL      string
 	httpClient   *uhttp.BaseHttpClient
@@ -21,7 +28,7 @@ type AvalaraClient struct {
 	clientHeader string
 }
 
-// PaginationOptions represents the pagination parameters
+// PaginationOptions represents the pagination parameters.
 type PaginationOptions struct {
 	Top      int
 	Skip     int
@@ -30,21 +37,21 @@ type PaginationOptions struct {
 	NextLink string
 }
 
-// PaginatedResponse is a generic interface for paginated responses
+// PaginatedResponse is a generic interface for paginated responses.
 type PaginatedResponse interface {
 	GetNextLink() string
 }
 
-// NewAvalaraClient creates a new instance of AvalaraClient
+// NewAvalaraClient creates a new instance of AvalaraClient.
 func NewAvalaraClient(environment string, httpClient *uhttp.BaseHttpClient) *AvalaraClient {
 	var baseURL string
 	switch environment {
 	case "sandbox":
-		baseURL = "https://sandbox-rest.avalara.com"
+		baseURL = SandboxBaseURL
 	case "test":
-		baseURL = "http://localhost:8080"
+		baseURL = TestBaseURL
 	default:
-		baseURL = "https://rest.avalara.com"
+		baseURL = ProductionBaseURL
 	}
 
 	appName := "baton-avalara"
@@ -59,12 +66,12 @@ func NewAvalaraClient(environment string, httpClient *uhttp.BaseHttpClient) *Ava
 	}
 }
 
-// AddCredentials configures the client with username and password
+// AddCredentials configures the client with username and password.
 func (c *AvalaraClient) AddCredentials(username, password string) {
 	c.credentials = base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
 }
 
-// AvalaraError represents an error returned by the Avalara API
+// AvalaraError represents an error returned by the Avalara API.
 type AvalaraError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -76,7 +83,7 @@ func (e *AvalaraError) Error() string {
 	return fmt.Sprintf("AvalaraError: %s (Code: %s, Target: %s, Details: %s)", e.Message, e.Code, e.Target, e.Details)
 }
 
-// AvalaraErrorResponse represents the structure of an error response
+// AvalaraErrorResponse represents the structure of an error response.
 type AvalaraErrorResponse struct {
 	Error AvalaraError `json:"error"`
 }
@@ -116,7 +123,7 @@ func (c *AvalaraClient) get(ctx context.Context, endpoint string, options *Pagin
 		return fmt.Errorf("error creating request: %w", err)
 	}
 
-	// Set headers manually
+	// Set headers manually.
 	req.Header.Set("Authorization", "Basic "+c.credentials)
 	req.Header.Set("X-Avalara-Client", c.clientHeader)
 	req.Header.Set("Content-Type", "application/json")
@@ -152,7 +159,7 @@ func (c *AvalaraClient) get(ctx context.Context, endpoint string, options *Pagin
 	return nil
 }
 
-// Helper function to update PaginationOptions
+// Helper function to update PaginationOptions.
 func updatePaginationOptions(options *PaginationOptions, response PaginatedResponse) *PaginationOptions {
 	if options == nil {
 		options = &PaginationOptions{}
@@ -161,7 +168,7 @@ func updatePaginationOptions(options *PaginationOptions, response PaginatedRespo
 	return options
 }
 
-// GetUserRoles retrieves the security roles for the authenticated user with pagination
+// GetUserRoles retrieves the security roles for the authenticated user with pagination.
 func (c *AvalaraClient) GetUserRoles(ctx context.Context, options *PaginationOptions) (*SecurityRoleResponse, *PaginationOptions, error) {
 	var result SecurityRoleResponse
 	err := c.get(ctx, "/api/v2/definitions/securityroles", options, &result)
@@ -171,7 +178,7 @@ func (c *AvalaraClient) GetUserRoles(ctx context.Context, options *PaginationOpt
 	return &result, updatePaginationOptions(options, &result), nil
 }
 
-// GetAccounts retrieves the accounts associated with the authenticated user with pagination
+// GetAccounts retrieves the accounts associated with the authenticated user with pagination.
 func (c *AvalaraClient) GetAccounts(ctx context.Context, options *PaginationOptions) (*AccountResponse, *PaginationOptions, error) {
 	var result AccountResponse
 	err := c.get(ctx, "/api/v2/accounts", options, &result)
@@ -181,7 +188,7 @@ func (c *AvalaraClient) GetAccounts(ctx context.Context, options *PaginationOpti
 	return &result, updatePaginationOptions(options, &result), nil
 }
 
-// GetUsers retrieves the users associated with the authenticated user with pagination
+// GetUsers retrieves the users associated with the authenticated user with pagination.
 func (c *AvalaraClient) GetUsers(ctx context.Context, options *PaginationOptions) (*UserResponse, *PaginationOptions, error) {
 	var result UserResponse
 	err := c.get(ctx, "/api/v2/users", options, &result)
@@ -191,7 +198,7 @@ func (c *AvalaraClient) GetUsers(ctx context.Context, options *PaginationOptions
 	return &result, updatePaginationOptions(options, &result), nil
 }
 
-// GetPermissions retrieves the list of permissions with pagination
+// GetPermissions retrieves the list of permissions with pagination.
 func (c *AvalaraClient) GetPermissions(ctx context.Context, options *PaginationOptions) (*PermissionResponse, *PaginationOptions, error) {
 	var result PermissionResponse
 	err := c.get(ctx, "/api/v2/definitions/permissions", options, &result)
@@ -201,7 +208,7 @@ func (c *AvalaraClient) GetPermissions(ctx context.Context, options *PaginationO
 	return &result, updatePaginationOptions(options, &result), nil
 }
 
-// GetUserEntitlements retrieves all entitlements for a single user
+// GetUserEntitlements retrieves all entitlements for a single user.
 func (c *AvalaraClient) GetUserEntitlements(ctx context.Context, accountID, userID int) (*EntitlementResponse, error) {
 	endpoint := fmt.Sprintf("/api/v2/accounts/%d/users/%d/entitlements", accountID, userID)
 	var result EntitlementResponse
@@ -212,7 +219,7 @@ func (c *AvalaraClient) GetUserEntitlements(ctx context.Context, accountID, user
 	return &result, nil
 }
 
-// AccountModel represents the structure of an account in the API response
+// AccountModel represents the structure of an account in the API response.
 type AccountModel struct {
 	ID              int    `json:"id"`
 	Name            string `json:"name"`
@@ -223,7 +230,7 @@ type AccountModel struct {
 	IsDeleted       bool   `json:"isDeleted"`
 }
 
-// AccountResponse represents the structure of the API response for account queries
+// AccountResponse represents the structure of the API response for account queries.
 type AccountResponse struct {
 	RecordsetCount int            `json:"@recordsetCount,omitempty"`
 	Value          []AccountModel `json:"value"`
@@ -231,12 +238,12 @@ type AccountResponse struct {
 	PageKey        string         `json:"pageKey,omitempty"`
 }
 
-// Implement GetNextLink() for each response type
+// Implement GetNextLink() for each response type.
 func (r *AccountResponse) GetNextLink() string {
 	return r.NextLink
 }
 
-// UserModel represents the structure of a user in the API response
+// UserModel represents the structure of a user in the API response.
 type UserModel struct {
 	ID                   int    `json:"id"`
 	AccountID            int    `json:"accountId"`
@@ -253,7 +260,7 @@ type UserModel struct {
 	IsDeleted            bool   `json:"isDeleted"`
 }
 
-// UserResponse represents the structure of the API response for user queries
+// UserResponse represents the structure of the API response for user queries.
 type UserResponse struct {
 	RecordsetCount int         `json:"@recordsetCount,omitempty"`
 	Value          []UserModel `json:"value"`
@@ -261,18 +268,18 @@ type UserResponse struct {
 	PageKey        string      `json:"pageKey,omitempty"`
 }
 
-// Implement GetNextLink() for each response type
+// Implement GetNextLink() for each response type.
 func (r *UserResponse) GetNextLink() string {
 	return r.NextLink
 }
 
-// SecurityRoleModel represents the structure of a security role in the API response
+// SecurityRoleModel represents the structure of a security role in the API response.
 type SecurityRoleModel struct {
 	ID          int    `json:"id"`
 	Description string `json:"description"`
 }
 
-// SecurityRoleResponse represents the structure of the API response for security role queries
+// SecurityRoleResponse represents the structure of the API response for security role queries.
 type SecurityRoleResponse struct {
 	RecordsetCount int                 `json:"@recordsetCount,omitempty"`
 	Value          []SecurityRoleModel `json:"value"`
@@ -280,12 +287,12 @@ type SecurityRoleResponse struct {
 	PageKey        string              `json:"pageKey,omitempty"`
 }
 
-// Implement GetNextLink() for each response type
+// Implement GetNextLink() for each response type.
 func (r *SecurityRoleResponse) GetNextLink() string {
 	return r.NextLink
 }
 
-// PermissionResponse represents the structure of the API response for permission queries
+// PermissionResponse represents the structure of the API response for permission queries.
 type PermissionResponse struct {
 	RecordsetCount int      `json:"@recordsetCount,omitempty"`
 	Value          []string `json:"value"`
@@ -293,12 +300,12 @@ type PermissionResponse struct {
 	PageKey        string   `json:"pageKey,omitempty"`
 }
 
-// Implement GetNextLink() for each response type
+// Implement GetNextLink() for each response type.
 func (r *PermissionResponse) GetNextLink() string {
 	return r.NextLink
 }
 
-// EntitlementResponse represents the structure of the API response for user entitlements
+// EntitlementResponse represents the structure of the API response for user entitlements.
 type EntitlementResponse struct {
 	Permissions []string `json:"permissions"`
 	AccessLevel string   `json:"accessLevel"`
@@ -327,7 +334,7 @@ func (c *AvalaraClient) Ping(ctx context.Context) (*PingResponse, error) {
 	return &result, nil
 }
 
-// GetAvalaraClient creates and returns a configured AvalaraClient
+// GetAvalaraClient creates and returns a configured AvalaraClient.
 func GetAvalaraClient(ctx context.Context, environment, username, password string) (*AvalaraClient, error) {
 	httpClient, err := uhttp.NewClient(ctx, uhttp.WithLogger(true, ctxzap.Extract(ctx)))
 	if err != nil {

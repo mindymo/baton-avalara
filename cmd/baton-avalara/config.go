@@ -39,7 +39,7 @@ var (
 	}
 )
 
-// ValidateConfig checks the configuration values and returns an error if they are invalid
+// ValidateConfig checks the configuration values and returns an error if they are invalid.
 func ValidateConfig(v *viper.Viper) error {
 	username := v.GetString(UsernameField.FieldName)
 	password := v.GetString(PasswordField.FieldName)

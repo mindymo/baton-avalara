@@ -30,7 +30,11 @@ func (r *roleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 }
 
 // List returns all the roles from the Avalara API as resource objects.
-func (r *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (r *roleBuilder) List(
+	ctx context.Context,
+	parentResourceID *v2.ResourceId,
+	pToken *pagination.Token,
+) ([]*v2.Resource, string, annotations.Annotations, error) {
 	var rv []*v2.Resource
 
 	options := &avalaraclient.PaginationOptions{
@@ -128,7 +132,11 @@ func (r *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken 
 	return rv, nextPageToken, nil, nil
 }
 
-func (r *roleBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (r *roleBuilder) Entitlements(
+	_ context.Context,
+	resource *v2.Resource,
+	_ *pagination.Token,
+) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	var rv []*v2.Entitlement
 
 	entitlementOptions := []entitlement.EntitlementOption{

@@ -23,22 +23,22 @@ func main() {
 	http.HandleFunc("/api/v2/utilities/ping", authMiddleware(handlePing))
 
 	port := 8080
-	fmt.Printf("Starting test server on port %d...\n", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+	log.Printf("Starting test server on port %d...\n", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil)) //nolint:gosec // This is a test server.
 }
 
 func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Generate a correlation ID
+		// Generate a correlation ID.
 		correlationID := uuid.New().String()
 
-		// Set X-Correlation-Id header in the response
+		// Set X-Correlation-Id header in the response.
 		w.Header().Set("X-Correlation-Id", correlationID)
 
-		// Log the incoming request
+		// Log the incoming request.
 		logRequest(r.URL.Path, r)
 
-		// Check for Authorization header
+		// Check for Authorization header.
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			log.Printf("Authentication failed: Missing Authorization header")
@@ -60,7 +60,7 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Log the decoded credentials for debugging
+		// Log the decoded credentials for debugging.
 		log.Printf("Decoded credentials: %s", string(payload))
 
 		pair := strings.SplitN(string(payload), ":", 2)
@@ -70,17 +70,13 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Check for X-Avalara-Client header
+		// Check for X-Avalara-Client header.
 		clientHeader := r.Header.Get("X-Avalara-Client")
 		if clientHeader == "" {
 			log.Printf("Authentication failed: Missing X-Avalara-Client header")
 			sendAuthError(w, "Missing X-Avalara-Client header")
 			return
 		}
-
-		// Remove Content-Type header check
-
-		// Remove Accept header check
 
 		log.Printf("Authentication successful for user: %s", pair[0])
 		next.ServeHTTP(w, r)
@@ -91,7 +87,7 @@ func sendAuthError(w http.ResponseWriter, message string) {
 	log.Printf("Authentication error: %s", message)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": map[string]interface{}{
 			"code":    "AuthenticationException",
 			"message": message,
@@ -101,17 +97,20 @@ func sendAuthError(w http.ResponseWriter, message string) {
 			},
 		},
 	})
+	if err != nil {
+		log.Printf("Error sending authentication error: %v", err)
+	}
 }
 
 func handleSecurityRoles(w http.ResponseWriter, r *http.Request) {
 	logRequest("/api/v2/definitions/securityroles", r)
 
-	// Parse query parameters
+	// Parse query parameters.
 	queryParams := r.URL.Query()
 	filter := queryParams.Get("$filter")
 	skip, _ := strconv.Atoi(queryParams.Get("$skip"))
 
-	// Define all security roles
+	// Define all security roles.
 	allRoles := []map[string]interface{}{
 		{"id": 1, "description": "AccountAdmin"},
 		{"id": 2, "description": "AccountUser"},
@@ -137,7 +136,7 @@ func handleSecurityRoles(w http.ResponseWriter, r *http.Request) {
 		{"id": 22, "description": "TreasuryUser"},
 	}
 
-	// Apply filtering if a filter is provided
+	// Apply filtering if a filter is provided.
 	filteredRoles := []map[string]interface{}{}
 	if filter != "" {
 		for _, role := range allRoles {
@@ -154,18 +153,20 @@ func handleSecurityRoles(w http.ResponseWriter, r *http.Request) {
 		"value":           filteredRoles[skip:],
 	}
 
-	// Update nextLink only for the first request
+	// Update nextLink only for the first request.
 	if skip == 0 && len(filteredRoles) > 0 {
-		response["@nextLink"] = fmt.Sprintf("http://localhost:8080/api/v2/definitions/securityroles?$skip=%d&$top=%d&$filter=%s", len(filteredRoles), len(filteredRoles), filter)
+		response["@nextLink"] = fmt.Sprintf(
+			"http://localhost:8080/api/v2/definitions/securityroles?$skip=%d&$top=%d&$filter=%s",
+			len(filteredRoles), len(filteredRoles), filter)
 	}
 
 	sendJSONResponse(w, response)
 }
 
-// Helper function to apply filter for security roles
+// Helper function to apply filter for security roles.
 func applyRoleFilter(role map[string]interface{}, filter string) bool {
-	// Implement basic filtering logic here
-	// For example, let's support filtering by id or description
+	// Implement basic filtering logic here.
+	// For example, let's support filtering by id or description.
 	if strings.Contains(filter, "id eq") {
 		idStr := strings.TrimSpace(strings.TrimPrefix(filter, "id eq"))
 		id, err := strconv.Atoi(idStr)
@@ -176,16 +177,16 @@ func applyRoleFilter(role map[string]interface{}, filter string) bool {
 		description := strings.Trim(strings.TrimSpace(strings.TrimPrefix(filter, "description eq")), "'")
 		return strings.EqualFold(role["description"].(string), description)
 	}
-	// Add more filter conditions as needed
+	// Add more filter conditions as needed.
 
-	// If no filter matches, return true (include the role)
+	// If no filter matches, return true (include the role).
 	return true
 }
 
 func handleUsers(w http.ResponseWriter, r *http.Request) {
 	logRequest("/api/v2/users", r)
 
-	// Parse query parameters
+	// Parse query parameters.
 	queryParams := r.URL.Query()
 	filter := queryParams.Get("$filter")
 	include := queryParams.Get("$include")
@@ -193,7 +194,7 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 	skip, _ := strconv.Atoi(queryParams.Get("$skip"))
 	orderBy := queryParams.Get("$orderBy")
 
-	// Define all users
+	// Define all users.
 	allUsers := []map[string]interface{}{
 		{
 			"id": 12345, "accountId": 123456789, "companyId": 123456,
@@ -267,7 +268,7 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// Apply filtering if a filter is provided
+	// Apply filtering if a filter is provided.
 	filteredUsers := []map[string]interface{}{}
 	if filter != "" {
 		for _, user := range allUsers {
@@ -279,49 +280,51 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 		filteredUsers = allUsers
 	}
 
-	// Apply ordering if orderBy is provided
+	// Apply ordering if orderBy is provided.
 	if orderBy != "" {
 		sortUsers(filteredUsers, orderBy)
 	}
 
-	// Apply pagination
+	// Apply pagination.
 	start := skip
 	end := len(filteredUsers)
 	if top > 0 {
-		end = min(start+top, end)
+		end = minCheck(start+top, end)
 	}
 	paginatedUsers := filteredUsers[start:end]
 
-	// Handle $include parameter
+	// Handle $include parameter.
 	if include == "FetchResult" {
 		for i, user := range paginatedUsers {
 			paginatedUsers[i] = addFetchResult(user)
 		}
 	}
 
-	// Initialize the response
+	// Initialize the response.
 	response := map[string]interface{}{
 		"@recordsetCount": len(filteredUsers),
 		"value":           paginatedUsers,
 	}
 
-	// Update nextLink if necessary
+	// Update nextLink if necessary.
 	if end < len(filteredUsers) {
 		nextSkip := skip + len(paginatedUsers)
-		response["@nextLink"] = fmt.Sprintf("http://localhost:8080/api/v2/users?$skip=%d&$top=%d&$filter=%s&$orderBy=%s&$include=%s", nextSkip, top, filter, orderBy, include)
+		response["@nextLink"] = fmt.Sprintf(
+			"http://localhost:8080/api/v2/users?$skip=%d&$top=%d&$filter=%s&$orderBy=%s&$include=%s",
+			nextSkip, top, filter, orderBy, include)
 	}
 
 	sendJSONResponse(w, response)
 }
 
-// Helper function to apply filter
+// Helper function to apply filter.
 func applyFilter(user map[string]interface{}, filter string) bool {
 	if strings.Contains(filter, "lastName startsWith") {
 		prefix := strings.Trim(strings.TrimSpace(strings.TrimPrefix(filter, "lastName startsWith")), "\"")
 		lastName, ok := user["lastName"].(string)
 		return ok && strings.HasPrefix(strings.ToLower(lastName), strings.ToLower(prefix))
 	}
-	// Add more filter conditions as needed
+	// Add more filter conditions as needed.
 	return true
 }
 
@@ -345,7 +348,7 @@ func sortUsers(users []map[string]interface{}, orderBy string) {
 	})
 }
 
-func min(a, b int) int {
+func minCheck(a, b int) int {
 	if a < b {
 		return a
 	}
@@ -388,7 +391,7 @@ func sendJSONResponse(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	// Log the response
+	// Log the response.
 	responseJSON, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		log.Printf("Error marshaling response: %v", err)
@@ -396,7 +399,10 @@ func sendJSONResponse(w http.ResponseWriter, data interface{}) {
 		log.Printf("Response sent:\n%s", string(responseJSON))
 	}
 
-	json.NewEncoder(w).Encode(data)
+	err = json.NewEncoder(w).Encode(data)
+	if err != nil {
+		log.Printf("Error sending response: %v", err)
+	}
 }
 
 func logRequest(endpoint string, r *http.Request) {
@@ -404,7 +410,7 @@ func logRequest(endpoint string, r *http.Request) {
 	log.Printf("  Method: %s\n", r.Method)
 	log.Printf("  Query parameters: %s\n", r.URL.RawQuery)
 
-	// Log headers
+	// Log headers.
 	log.Println("  Headers:")
 	for name, values := range r.Header {
 		for _, value := range values {
@@ -412,7 +418,7 @@ func logRequest(endpoint string, r *http.Request) {
 		}
 	}
 
-	// Log form parameters
+	// Log form parameters.
 	err := r.ParseForm()
 	if err == nil {
 		log.Println("  Form parameters:")
@@ -423,18 +429,18 @@ func logRequest(endpoint string, r *http.Request) {
 		}
 	}
 
-	// Log request body if it's a POST or PUT request
-	if r.Method == "POST" || r.Method == "PUT" {
+	// Log request body if it's a POST or PUT request.
+	if r.Method == http.MethodPost || r.Method == http.MethodPut {
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err == nil {
 			log.Printf("  Request body:\n%s\n", string(bodyBytes))
-			// Restore the body to be read again
+			// Restore the body to be read again.
 			r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		}
 	}
 }
 
-// Add new function to handle errors
+// Add new function to handle errors.
 func sendErrorResponse(w http.ResponseWriter, statusCode int, errorCode, message, target string, details []string) {
 	if w.Header().Get("X-Correlation-Id") == "" {
 		w.Header().Set("X-Correlation-Id", uuid.New().String())
@@ -445,7 +451,7 @@ func sendErrorResponse(w http.ResponseWriter, statusCode int, errorCode, message
 	for i, detail := range details {
 		errorDetails[i] = map[string]string{"message": detail}
 	}
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": map[string]interface{}{
 			"code":    errorCode,
 			"message": message,
@@ -453,19 +459,23 @@ func sendErrorResponse(w http.ResponseWriter, statusCode int, errorCode, message
 			"details": errorDetails,
 		},
 	})
+	if err != nil {
+		log.Printf("Error sending error response: %v", err)
+	}
 }
 
 func handlePing(w http.ResponseWriter, r *http.Request) {
 	logRequest("/api/v2/utilities/ping", r)
 
-	// Check for X-Avalara-Client header
+	// Check for X-Avalara-Client header.
 	clientHeader := r.Header.Get("X-Avalara-Client")
 	if clientHeader == "" {
-		sendErrorResponse(w, http.StatusBadRequest, "HeaderValidationException", "Missing X-Avalara-Client header", "X-Avalara-Client", []string{"The X-Avalara-Client header is required for all API calls"})
+		sendErrorResponse(w, http.StatusBadRequest, "HeaderValidationException", "Missing X-Avalara-Client header",
+			"X-Avalara-Client", []string{"The X-Avalara-Client header is required for all API calls"})
 		return
 	}
 
-	// Simulate successful ping response
+	// Simulate successful ping response.
 	response := map[string]interface{}{
 		"version":                "24.8.2",
 		"authenticated":          true,
@@ -478,7 +488,7 @@ func handlePing(w http.ResponseWriter, r *http.Request) {
 	sendJSONResponse(w, response)
 }
 
-// Helper function to add FetchResult to a user
+// Helper function to add FetchResult to a user.
 func addFetchResult(user map[string]interface{}) map[string]interface{} {
 	fetchResult := map[string]interface{}{
 		"@recordsetCount": 1,
@@ -489,7 +499,7 @@ func addFetchResult(user map[string]interface{}) map[string]interface{} {
 				"firstName": user["firstName"],
 				"lastName":  user["lastName"],
 				"email":     user["email"],
-				// Add other fields as needed
+				// Add other fields as needed.
 			},
 		},
 	}
